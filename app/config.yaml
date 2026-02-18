@@ -1,0 +1,88 @@
+# ============================================================
+# Reception Greeter – Production Configuration
+# ============================================================
+
+camera:
+  # Camera source: integer for USB device index, or RTSP URL string
+  source: 0
+  width: 1280
+  height: 720
+  fps: 30
+  # How many frames to skip between face-detection passes (perf tuning)
+  detect_every_n_frames: 3
+
+face_detection:
+  # Minimum detection confidence (0.0-1.0)
+  min_confidence: 0.5
+  # Minimum face size in pixels (width) to consider
+  min_face_size: 60
+  # InsightFace model pack name
+  model_pack: "buffalo_l"
+
+recognition:
+  # Cosine-similarity threshold: above this → positive match
+  # Tune for your camera/lighting. Range: 0.25-0.55 typical
+  similarity_threshold: 0.40
+  # Require same identity for K consecutive frames before triggering event
+  consecutive_frames_required: 3
+
+tracking:
+  # Max distance (in pixels of face center) to link detections across frames
+  max_link_distance: 120
+  # How many frames a track survives without a detection before deletion
+  max_frames_missing: 8
+
+door_line:
+  # Virtual door-line for entry/exit detection
+  # Coordinates are FRACTIONS of frame dimensions (0.0-1.0)
+  # Horizontal line: y_frac applied across full width
+  # Vertical line: x_frac applied across full height
+  orientation: "horizontal"      # "horizontal" or "vertical"
+  position: 0.50                 # fraction of frame height (horizontal) or width (vertical)
+  # Which side is "inside": "below" or "above" for horizontal; "left" or "right" for vertical
+  inside_direction: "below"
+
+greeting:
+  # Greeting mode: "presence" (greet when recognized, bye when they leave view)
+  #                "door_line" (greet only when crossing the virtual door line)
+  mode: "presence"
+  # Cooldown: don't re-greet same person within this many seconds
+  cooldown_seconds: 300
+  entry_template: "Hey {name}, welcome! Have a nice day."
+  exit_template: "Bye {name}, see you later!"
+  unknown_entry: "Hello! Please check in at reception."
+  unknown_exit: "Goodbye! Have a nice day."
+
+enrollment:
+  # Number of face samples to capture during enrollment
+  num_samples: 20
+  # Quality checks
+  min_face_width_px: 60
+  max_yaw_degrees: 45
+  max_pitch_degrees: 45
+  min_blur_laplacian: 25.0
+  min_brightness: 30
+  max_brightness: 235
+
+tts:
+  # Engine: "pyttsx3" (offline, fast) or "system" (OS default)
+  engine: "pyttsx3"
+  rate: 170           # speech rate (words per minute)
+  volume: 0.9         # 0.0 - 1.0
+
+database:
+  # SQLite database path (relative to app/ directory)
+  path: "../data/faces.db"
+
+logging:
+  level: "INFO"
+  # Log file (relative to app/ directory)
+  file: "../logs/reception.log"
+  # Also log entry/exit events to separate audit file
+  audit_file: "../logs/audit.log"
+
+performance:
+  # Resize frame to this width for detection (faster). 0 = no resize.
+  detection_resize_width: 640
+  # Use GPU if available
+  use_gpu: false

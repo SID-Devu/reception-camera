@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  reception-camera:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../src:/app/src
+      - ../scripts:/app/scripts
+      - ../docker:/app/docker
+    environment:
+      - DATABASE_URL=sqlite:///app/database.db
+      - CAMERA_RESOLUTION=1280x720
+      - RECOGNITION_THRESHOLD=0.6
+    restart: unless-stopped
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: reception_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  db_data:

@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime data
+data/*.db
+data/*.db-journal
+logs/*.log
+sessions/
+
+# InsightFace model cache (downloaded automatically)
+.insightface/
+
+# Environment variables
+.env
+
+# Byte-compiled
+*.pyc
+*.pyo

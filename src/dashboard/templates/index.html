@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Reception Dashboard</title>
+</head>
+<body>
+    <header>
+        <h1>Welcome to the Reception Dashboard</h1>
+    </header>
+    <main>
+        <section id="greeting">
+            <h2>Greetings</h2>
+            <p id="greeting-message">Hello! Please step forward.</p>
+        </section>
+        <section id="logs">
+            <h2>Entry and Exit Logs</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="log-entries">
+                    <!-- Log entries will be populated here -->
+                </tbody>
+            </table>
+        </section>
+        <section id="enrollment">
+            <h2>Enroll New Individual</h2>
+            <a href="{{ url_for('enroll') }}">Enroll</a>
+        </section>
+    </main>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>{% block title %}Reception Camera{% endblock %}</title>
+</head>
+<body>
+    <header>
+        <h1>Welcome to the Reception Camera System</h1>
+        <nav>
+            <ul>
+                <li><a href="{% url 'index' %}">Home</a></li>
+                <li><a href="{% url 'enroll' %}">Enroll</a></li>
+                <li><a href="{% url 'logs' %}">Logs</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2023 Reception Camera System</p>
+    </footer>
+    <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

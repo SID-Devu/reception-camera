@@ -1,0 +1,29 @@
+[tool]
+name = "reception-camera"
+version = "1.0.0"
+description = "Real-time face-recognition camera system that greets people by name when they arrive and says goodbye when they leave."
+authors = ["Sudheer Ibrahim Daniel Devu <sudheerdevu4work@gmail.com>"]
+license = "MIT"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependencies]
+opencv-python = "^4.5.3"
+numpy = "^1.21.0"
+fastapi = "^0.68.0"
+uvicorn = "^0.15.0"
+sqlalchemy = "^1.4.22"
+pydantic = "^1.8.2"
+tensorflow = "^2.6.0"
+scikit-learn = "^0.24.2"
+python-dotenv = "^0.19.1"
+
+[dev-dependencies]
+pytest = "^6.2.4"
+black = "^21.7b0"
+isort = "^5.9.3"
+mypy = "^0.910"
+flake8 = "^3.9.2"
+alembic = "^1.7.0"

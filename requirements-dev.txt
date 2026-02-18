@@ -1,0 +1,17 @@
+numpy
+opencv-python
+tensorflow
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+alembic
+pytest
+pytest-cov
+requests
+python-dotenv
+scikit-learn
+pillow
+pyttsx3
+slack_sdk
+email-validator
