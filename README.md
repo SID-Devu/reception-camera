@@ -14,7 +14,7 @@ Camera → Face Detection → Embedding → Recognition → Tracking → Event �
 | Recognition | ArcFace `w600k_r50` - 512-dim cosine similarity |
 | Tracking | Centroid-distance tracker with identity streaks |
 | Events | Presence-based or door-line crossing |
-| TTS | Offline pyttsx3 (Windows SAPI / espeak) |
+| TTS | Offline pyttsx3 (Windows SAPI / macOS AVFoundation / Linux espeak) |
 | Database | SQLite - faces, embeddings, audit events |
 | Cooldown | Configurable per-person cooldown (default 5 min) |
 
@@ -59,7 +59,7 @@ reception-camera/
 | Python | 3.10 - 3.13 | Tested on 3.13 (Windows) |
 | pip | latest | `python -m pip install --upgrade pip` |
 | Webcam | any USB / built-in | Or RTSP URL in config |
-| OS | Windows 10/11, Linux, macOS | TTS uses SAPI (Win) or espeak (Linux) |
+| OS | Windows 10/11, Linux, macOS | TTS uses SAPI (Win), AVFoundation (macOS), or espeak (Linux) |
 
 ### Hardware
 
@@ -271,9 +271,9 @@ greeting:
 
 ```yaml
 tts:
-  engine: "pyttsx3"
-  rate: 170                     # Words per minute
-  volume: 0.9                   # 0.0 - 1.0
+  engine: "pyttsx3"             # Offline TTS (Windows SAPI / macOS AVFoundation / Linux espeak)
+  rate: 170                     # Words per minute (adjusted for each platform)
+  volume: 0.9                   # 0.0 - 1.0 (system volume controls output on macOS)
 ```
 
 ### Performance
@@ -357,11 +357,13 @@ performance:
 ### TTS not playing audio
 
 - Check system volume and default audio output device.
-- On Linux: install espeak (`sudo apt install espeak`).
-- Test TTS independently:
-  ```bash
-  python -c "import pyttsx3; e=pyttsx3.init(); e.say('hello'); e.runAndWait()"
-  ```
+- **Windows:** Ensure no other apps override SAPI volume.
+- **macOS:** 
+  - System volume controls TTS output (volume property ignored by AVFoundation).
+  - Check System Preferences → Sound → Output.
+  - Test TTS independently: `python -c "import pyttsx3; e=pyttsx3.init(); e.say('hello'); e.runAndWait()"`
+  - For debugging, run: `python test_macos_tts.py` (requires webcam folder)
+- **Linux:** Install espeak (`sudo apt install espeak`) and pyttsx3 will use it automatically.
 
 ### Greeting fires too slowly / too fast
 

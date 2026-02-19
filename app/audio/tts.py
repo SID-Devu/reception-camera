@@ -3,13 +3,20 @@ Reception Greeter – Text-to-Speech engine.
 
 Uses pyttsx3 for fully offline, low-latency speech synthesis.
 Runs TTS in a background thread so it never blocks the vision pipeline.
+
+Platform notes:
+- Windows: Uses SAPI5 (native speaker)
+- macOS: Uses AVFoundation (NSSpeechSynthesizer)
+- Linux: Uses espeak (requires package: sudo apt install espeak)
 """
 
 from __future__ import annotations
 
 import logging
+import platform
 import queue
 import threading
+import time
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -25,18 +32,21 @@ class TTSEngine:
 
     def __init__(self, rate: int = 170, volume: float = 0.9) -> None:
         self._rate = rate
+        self._rate_macos = rate - 20  # macOS speech is slower, compensate
         self._volume = volume
         self._queue: queue.Queue[Optional[str]] = queue.Queue()
+        self._os = platform.system()  # "Windows", "Darwin" (macOS), "Linux"
         self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
-        logger.info("TTS engine started  rate=%d  volume=%.1f", rate, volume)
+        logger.info("TTS engine started on %s  rate=%d  volume=%.1f", self._os, rate, volume)
 
     def _worker(self) -> None:
         """Background worker that processes the speech queue.
 
-        Reinitialises pyttsx3 for **every** utterance to work around a
-        known Windows COM bug where ``runAndWait()`` returns instantly
-        after the first call without producing any audio.
+        Uses OS-specific speech synthesis:
+        - Windows: SAPI5 with per-utterance engine reinitialization (COM bug workaround)
+        - macOS: AVFoundation with extra waiting (runAndWait() often returns early)
+        - Linux: espeak backend
         """
         import pyttsx3
 
@@ -47,18 +57,58 @@ class TTSEngine:
                 break  # Shutdown signal
             try:
                 logger.info("TTS speaking: %s", text)
-                engine = pyttsx3.init()
-                engine.setProperty("rate", self._rate)
-                engine.setProperty("volume", self._volume)
-                engine.say(text)
-                engine.runAndWait()
-                engine.stop()
-                del engine
+                
+                if self._os == "Darwin":  # macOS
+                    self._speak_macos(pyttsx3, text)
+                else:  # Windows, Linux, etc.
+                    self._speak_generic(pyttsx3, text)
+                    
                 logger.info("TTS finished: %s", text)
             except Exception:
                 logger.exception("TTS error for text: %s", text)
             finally:
                 self._queue.task_done()
+
+    def _speak_generic(self, pyttsx3, text: str) -> None:
+        """Generic TTS for Windows and Linux."""
+        engine = pyttsx3.init()
+        engine.setProperty("rate", self._rate)
+        engine.setProperty("volume", self._volume)
+        engine.say(text)
+        engine.runAndWait()
+        engine.stop()
+        del engine
+
+    def _speak_macos(self, pyttsx3, text: str) -> None:
+        """
+        macOS AVFoundation speech synthesis.
+        
+        Challenges:
+        - AVFoundation's runAndWait() may return immediately without actually finishing
+        - Volume setting is often ignored by system mixer
+        - Speech rate seems slower than on Windows
+        
+        Workaround: Estimate speech duration and wait extra time.
+        """
+        engine = pyttsx3.init()
+        try:
+            # Compensate for slower macOS speech
+            engine.setProperty("rate", self._rate_macos)
+            engine.setProperty("volume", min(1.0, self._volume))
+            
+            # Estimate duration: ~150 WPM = 2.5 words/sec = ~500ms per word
+            word_count = max(1, len(text.split()))
+            estimated_secs = (word_count / self._rate_macos) * 60.0
+            
+            engine.say(text)
+            engine.runAndWait()
+            
+            # macOS often returns from runAndWait() before audio finishes
+            # Add extra wait time (estimated duration + safety margin)
+            time.sleep(max(estimated_secs + 0.5, 1.0))
+        finally:
+            engine.stop()
+            del engine
 
     def speak(self, text: str) -> None:
         """Queue a message for speech (non-blocking)."""
