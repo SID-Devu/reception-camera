@@ -40,7 +40,19 @@ Before installing, make sure you have:
 python --version
 
 # Check your webcam works (press Ctrl+C to exit)
-python -c "import cv2; cap = cv2.VideoCapture(0); print('✅ Webcam works!' if cap.isOpened() else '❌ Webcam not found')"
+# On Linux: Use this version (avoids bash history expansion issues with !)
+python3 << 'EOF'
+import cv2
+cap = cv2.VideoCapture(0)
+if cap.isOpened():
+    print("Webcam works!")
+else:
+    print("Webcam not found")
+cap.release()
+EOF
+
+# On Windows: Can use this simpler version
+python -c "import cv2; cap = cv2.VideoCapture(0); print('OK' if cap.isOpened() else 'FAIL')"
 ```
 
 ---
@@ -120,16 +132,26 @@ Expected output:
 
 ### Step 4: Install All Dependencies
 
-**Windows users** - Run this (easiest, handles build issues automatically):
+**Recommended for all platforms** (handles platform-specific issues):
 
 ```bash
 python install.py
 ```
 
-**Everyone else:**
+**Or manually on Linux/macOS:**
 
 ```bash
-pip install --prefer-binary opencv-python numpy insightface onnxruntime scipy pyttsx3 PyYAML albumentations==1.4.24
+pip install opencv-python numpy insightface onnxruntime scipy pyttsx3 PyYAML albumentations==1.4.24
+```
+
+**Linux users:** If you get build errors for insightface, you may need development headers:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install python3-dev python3.12-dev build-essential
+
+# Or use prebuilt wheels (faster)
+pip install --prefer-binary insightface opencv-python
 ```
 
 Expected output:
@@ -137,7 +159,7 @@ Expected output:
 Collecting opencv-python
   Downloading opencv_python-4.13.0...
 ...
-✅ Successfully installed insightface-0.7.3
+Successfully installed insightface-0.7.3
 ```
 
 > **Installation takes 2-5 minutes** depending on your internet. Be patient!
@@ -350,6 +372,38 @@ Issues Found:
 ---
 
 ## 🛠️ Troubleshooting
+
+### Linux: "python3-venv package not installed"
+
+**Error:** `ensurepip is not available`
+
+**Solution:**
+
+```bash
+# Ubuntu/Debian systems
+sudo apt-get install python3.12-venv
+
+# Then recreate venv
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### Linux: "No module named 'insightface'" after venv creation
+
+**Error:** You created venv but skipped the installation step
+
+**Solution:**
+
+```bash
+# Make sure venv is activated
+source .venv/bin/activate
+
+# Run the installer
+python install.py
+
+# Or manually install
+pip install --prefer-binary insightface opencv-python numpy onnxruntime scipy pyttsx3 PyYAML albumentations==1.4.24
+```
 
 ### "Webcam not found" or "Camera won't open"
 

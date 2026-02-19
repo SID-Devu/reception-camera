@@ -40,6 +40,16 @@ def install_packages():
     print(f"Platform: {os_name} ({platform.release()})")
     print(f"Python: {sys.version.split()[0]}")
     print(f"{'='*50}\n")
+    
+    # Linux specific checks
+    if os_name == "Linux":
+        print("⚠ Linux detected")
+        print("  If you haven't created a venv yet, run:")
+        print("    python3 -m venv .venv")
+        print("  If you get 'ensurepip is not available', install venv package:")
+        print("    sudo apt-get install python3.12-venv")
+        print("  Then activate it:")
+        print("    source .venv/bin/activate\n")
 
     # Build pip install command
     cmd = [sys.executable, "-m", "pip", "install"]
@@ -60,7 +70,13 @@ def install_packages():
             print("  • If insightface still fails, install Microsoft C++ Build Tools:")
             print("    https://visualstudio.microsoft.com/visual-cpp-build-tools/")
             print("  • Or downgrade to Python 3.10 for better compatibility")
+        elif os_name == "Linux":
+            print("  • Install build tools:")
+            print("    sudo apt-get install python3-dev python3.12-dev build-essential")
+            print("  • Or use prebuilt wheels:")
+            print("    pip install --prefer-binary insightface opencv-python")
         print("  • Check that your virtual environment is activated")
+        print("  • Check your internet connection")
         return False
 
     print("\n✅ Installation successful!")
