@@ -8,6 +8,11 @@ Platform notes:
 - Windows: Uses SAPI5 (native speaker)
 - macOS: Uses AVFoundation (NSSpeechSynthesizer)
 - Linux: Uses espeak (requires package: sudo apt install espeak)
+
+Speaker auto-detection:
+- Discovers available audio output devices at startup
+- Auto-selects best speaker (USB > HDMI > built-in)
+- Gracefully disables TTS if no speaker is connected
 """
 
 from __future__ import annotations
@@ -30,15 +35,52 @@ class TTSEngine:
     processed sequentially in a daemon thread.
     """
 
-    def __init__(self, rate: int = 170, volume: float = 0.9) -> None:
+    def __init__(
+        self,
+        rate: int = 170,
+        volume: float = 0.9,
+        auto_detect_speaker: bool = True,
+    ) -> None:
         self._rate = rate
         self._rate_macos = rate - 20  # macOS speech is slower, compensate
         self._volume = volume
         self._queue: queue.Queue[Optional[str]] = queue.Queue()
         self._os = platform.system()  # "Windows", "Darwin" (macOS), "Linux"
+        self._speaker_available = True
+        self._audio_device_name: Optional[str] = None
+
+        # Auto-detect speakers
+        if auto_detect_speaker:
+            self._detect_speakers()
+
+        if not self._speaker_available:
+            logger.warning("No audio output device found – TTS will be silent")
+            return
+
         self._thread = threading.Thread(target=self._worker, daemon=True)
         self._thread.start()
-        logger.info("TTS engine started on %s  rate=%d  volume=%.1f", self._os, rate, volume)
+        logger.info(
+            "TTS engine started on %s  rate=%d  volume=%.1f  speaker=%s",
+            self._os, rate, volume,
+            self._audio_device_name or "system-default",
+        )
+
+    def _detect_speakers(self) -> None:
+        """Discover audio output devices and select the best one."""
+        try:
+            from app.hardware.audio_discovery import discover_audio_outputs
+            devices = discover_audio_outputs(auto_select=True)
+            if devices:
+                best = devices[0]
+                self._audio_device_name = best.name
+                self._speaker_available = best.is_available
+                logger.info("TTS will use speaker: %s (%s)", best.name, best.device_type.value)
+            else:
+                self._speaker_available = False
+        except ImportError:
+            logger.debug("Audio discovery module not available – using system default")
+        except Exception as e:
+            logger.warning("Speaker auto-detect failed: %s – using system default", e)
 
     def _worker(self) -> None:
         """Background worker that processes the speech queue.
@@ -111,11 +153,16 @@ class TTSEngine:
             del engine
 
     def speak(self, text: str) -> None:
-        """Queue a message for speech (non-blocking)."""
+        """Queue a message for speech (non-blocking). Silent if no speaker."""
+        if not self._speaker_available:
+            logger.debug("TTS silent (no speaker): %s", text)
+            return
         self._queue.put(text)
 
     def wait_and_shutdown(self, timeout: float = 15.0) -> None:
         """Wait for all queued speech to finish, then stop the worker."""
+        if not self._speaker_available:
+            return
         logger.info("TTS draining queue (%d items) …", self._queue.qsize())
         try:
             self._queue.join()  # blocks until every item is processed
@@ -127,6 +174,8 @@ class TTSEngine:
 
     def shutdown(self) -> None:
         """Stop the TTS worker thread immediately."""
+        if not self._speaker_available:
+            return
         self._queue.put(None)
         self._thread.join(timeout=5.0)
         logger.info("TTS engine shut down")

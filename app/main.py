@@ -1,8 +1,14 @@
 """
 Reception Greeter – Main real-time pipeline.
 
-Orchestrates: Camera → Detection → Embedding → Matching → Tracking →
-Door-line events → TTS greeting/bye.
+Orchestrates: Hardware Detection → Camera → Detection → Embedding →
+Matching → Tracking → Door-line events → TTS greeting/bye.
+
+Auto-detects:
+- Platform (Raspberry Pi 3/4/5, Qualcomm RB5, x86, Jetson)
+- Cameras (USB, CSI ribbon, RTSP/CCTV network cameras)
+- Speakers (USB, HDMI, built-in, Bluetooth)
+- Accelerators (NVIDIA GPU, Qualcomm NPU/DSP, XNNPACK)
 
 Usage:
     python app/main.py [--config app/config.yaml] [--no-display] [--no-tts]
@@ -82,6 +88,9 @@ def setup_audit_log(config: dict) -> logging.Logger:
 class ReceptionPipeline:
     """
     The main real-time recognition + greeting pipeline.
+
+    At startup, auto-detects hardware (RPi, RB5, x86), cameras (USB, CSI,
+    RTSP/CCTV), and speakers, then tunes config for optimal performance.
     """
 
     def __init__(self, config: dict, no_display: bool = False, no_tts: bool = False):
@@ -92,6 +101,12 @@ class ReceptionPipeline:
         self.logger = logging.getLogger("pipeline")
         self.audit = setup_audit_log(config)
 
+        # ---- Hardware auto-detection ----
+        self._hw_profile = None
+        hw_cfg = config.get("hardware", {})
+        if hw_cfg.get("auto_detect", True):
+            self._auto_detect_hardware(config)
+
         # ---- Database ----
         db_path = config.get("database", {}).get("path", "../data/faces.db")
         if not os.path.isabs(db_path):
@@ -101,25 +116,28 @@ class ReceptionPipeline:
             )
         self.db = FaceDB(db_path)
 
-        # ---- Camera ----
+        # ---- Camera (with auto-discovery support) ----
         cam_cfg = config.get("camera", {})
         self.camera = Camera(
-            source=cam_cfg.get("source", 0),
+            source=cam_cfg.get("source", "auto"),
             width=cam_cfg.get("width", 1280),
             height=cam_cfg.get("height", 720),
             fps=cam_cfg.get("fps", 30),
+            use_gstreamer=cam_cfg.get("use_gstreamer", False),
         )
         self.detect_every_n = cam_cfg.get("detect_every_n_frames", 3)
 
-        # ---- Face detection ----
+        # ---- Face detection (with hardware-optimised providers) ----
         det_cfg = config.get("face_detection", {})
         perf_cfg = config.get("performance", {})
+        providers = perf_cfg.get("providers", [])
         self.detector = FaceDetector(
             model_pack=det_cfg.get("model_pack", "buffalo_l"),
             min_confidence=det_cfg.get("min_confidence", 0.5),
             min_face_size=det_cfg.get("min_face_size", 60),
             detection_resize_width=perf_cfg.get("detection_resize_width", 640),
             use_gpu=perf_cfg.get("use_gpu", False),
+            providers=providers if providers else None,
         )
 
         # ---- Embedder ----
@@ -144,13 +162,14 @@ class ReceptionPipeline:
         self.greeting_mode = config.get("greeting", {}).get("mode", "presence")
         self.event_detector = None  # initialised in start()
 
-        # ---- TTS ----
+        # ---- TTS (with auto-detect speaker) ----
         self.tts: Optional[TTSEngine] = None
         if not no_tts:
             tts_cfg = config.get("tts", {})
             self.tts = TTSEngine(
                 rate=tts_cfg.get("rate", 170),
                 volume=tts_cfg.get("volume", 0.9),
+                auto_detect_speaker=tts_cfg.get("auto_detect_speaker", True),
             )
 
         # ---- Greeting templates ----
@@ -170,6 +189,72 @@ class ReceptionPipeline:
         # ---- Visual event banner ----
         self._event_banner: Optional[str] = None
         self._event_banner_until: float = 0.0
+
+    # ------------------------------------------------------------------ #
+    #  Hardware auto-detection & config tuning
+    # ------------------------------------------------------------------ #
+
+    def _auto_detect_hardware(self, config: dict) -> None:
+        """
+        Detect hardware platform and auto-tune config for best performance.
+
+        Modifies config dict in-place with optimised values for the
+        detected platform (RPi, RB5, Jetson, x86, etc.).
+        """
+        try:
+            from app.hardware.detector import detect_hardware
+            hw = detect_hardware()
+            self._hw_profile = hw
+            self.logger.info("Hardware profile: %s", hw.summary())
+
+            # ---- Auto-tune config based on hardware ----
+            cam_cfg = config.setdefault("camera", {})
+            det_cfg = config.setdefault("face_detection", {})
+            perf_cfg = config.setdefault("performance", {})
+
+            # Only override if user hasn't set explicit values (source=0 or "auto")
+            source = cam_cfg.get("source", "auto")
+            if source == "auto" or source == 0:
+                cam_cfg["source"] = "auto"
+
+            # Apply hardware-recommended settings
+            cam_cfg.setdefault("width", hw.recommended_resolution[0])
+            cam_cfg.setdefault("height", hw.recommended_resolution[1])
+            cam_cfg.setdefault("fps", hw.recommended_fps)
+            cam_cfg.setdefault("detect_every_n_frames", hw.recommended_detect_every_n)
+
+            det_cfg["model_pack"] = hw.recommended_model_pack
+            perf_cfg["detection_resize_width"] = hw.recommended_det_size
+            perf_cfg["use_gpu"] = hw.recommended_use_gpu
+            perf_cfg["providers"] = hw.recommended_providers
+
+            # Enable GStreamer on ARM platforms with CSI cameras
+            if hw.has_camera_csi:
+                cam_cfg["use_gstreamer"] = True
+                self.logger.info("CSI camera detected – enabling GStreamer backend")
+
+            # Set OpenCV thread count for ARM
+            num_threads = perf_cfg.get("num_threads", 0)
+            if num_threads > 0:
+                cv2.setNumThreads(num_threads)
+                self.logger.info("OpenCV threads set to %d", num_threads)
+
+            self.logger.info(
+                "Config auto-tuned: model=%s  det_size=%d  detect_every=%d  "
+                "resolution=%dx%d  fps=%d  providers=%s",
+                det_cfg["model_pack"],
+                perf_cfg["detection_resize_width"],
+                cam_cfg.get("detect_every_n_frames", 3),
+                cam_cfg.get("width", 1280),
+                cam_cfg.get("height", 720),
+                cam_cfg.get("fps", 30),
+                perf_cfg.get("providers", []),
+            )
+
+        except ImportError:
+            self.logger.debug("Hardware detection module not available – using config as-is")
+        except Exception as e:
+            self.logger.warning("Hardware auto-detection failed: %s – using config as-is", e)
 
     # ------------------------------------------------------------------ #
     #  Lifecycle
@@ -469,12 +554,74 @@ def main():
     parser.add_argument("--config", default="app/config.yaml", help="Config YAML path")
     parser.add_argument("--no-display", action="store_true", help="Run headless (no GUI)")
     parser.add_argument("--no-tts", action="store_true", help="Disable text-to-speech")
+    parser.add_argument("--detect-only", action="store_true",
+                        help="Only run hardware detection and print results (don't start pipeline)")
     args = parser.parse_args()
 
     with open(args.config, "r") as f:
         config = yaml.safe_load(f)
 
     setup_logging(config)
+    logger = logging.getLogger("main")
+
+    # ---- Detect-only mode: print hardware info and exit ----
+    if args.detect_only:
+        print("\n" + "=" * 60)
+        print("  Reception Greeter – Hardware Detection Report")
+        print("=" * 60)
+        try:
+            from app.hardware.detector import detect_hardware
+            hw = detect_hardware()
+            print(f"\n  Platform:       {hw.platform.value}")
+            print(f"  Architecture:   {hw.arch}")
+            print(f"  OS:             {hw.os_name}")
+            print(f"  CPU:            {hw.cpu_model}")
+            print(f"  CPU Cores:      {hw.cpu_cores}")
+            print(f"  RAM:            {hw.total_ram_mb} MB")
+            print(f"  Accelerators:   {', '.join(a.value for a in hw.accelerators)}")
+            print(f"  CSI Camera:     {hw.has_camera_csi}")
+            print(f"  Throttled:      {hw.thermal_throttled}")
+            print(f"\n  --- Recommended Settings ---")
+            print(f"  Model pack:     {hw.recommended_model_pack}")
+            print(f"  Detection size: {hw.recommended_det_size}")
+            print(f"  Detect every N: {hw.recommended_detect_every_n}")
+            print(f"  Resolution:     {hw.recommended_resolution[0]}x{hw.recommended_resolution[1]}")
+            print(f"  FPS:            {hw.recommended_fps}")
+            print(f"  Providers:      {hw.recommended_providers}")
+        except Exception as e:
+            print(f"\n  Hardware detection failed: {e}")
+
+        print("\n  --- Cameras ---")
+        try:
+            from app.hardware.camera_discovery import discover_cameras
+            hw_cfg = config.get("hardware", {})
+            cams = discover_cameras(
+                rtsp_urls=hw_cfg.get("rtsp_urls", []),
+                scan_network=hw_cfg.get("scan_network_cameras", False),
+            )
+            for c in cams:
+                status = "OK" if c.is_working else "FAIL"
+                print(f"  [{status}] {c.name}  type={c.camera_type.value}  source={c.source}")
+            if not cams:
+                print("  No cameras found")
+        except Exception as e:
+            print(f"  Camera discovery failed: {e}")
+
+        print("\n  --- Audio Outputs ---")
+        try:
+            from app.hardware.audio_discovery import discover_audio_outputs
+            speakers = discover_audio_outputs(auto_select=False)
+            for s in speakers:
+                dflt = " (default)" if s.is_default else ""
+                print(f"  {s.name}  type={s.device_type.value}{dflt}")
+            if not speakers:
+                print("  No audio outputs found")
+        except Exception as e:
+            print(f"  Audio discovery failed: {e}")
+
+        print("\n" + "=" * 60)
+        return
+
     pipeline = ReceptionPipeline(config, no_display=args.no_display, no_tts=args.no_tts)
     pipeline.run()
 

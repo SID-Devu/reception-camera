@@ -57,14 +57,33 @@ class FaceDetector:
         min_face_size: int = 60,
         detection_resize_width: int = 640,
         use_gpu: bool = False,
+        providers: Optional[List[str]] = None,
     ) -> None:
         import insightface
         from insightface.app import FaceAnalysis
 
-        providers = ["CUDAExecutionProvider", "CPUExecutionProvider"] if use_gpu else ["CPUExecutionProvider"]
+        # Build provider list: explicit list > gpu flag > CPU-only
+        if providers:
+            exec_providers = providers
+        elif use_gpu:
+            exec_providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        else:
+            exec_providers = ["CPUExecutionProvider"]
+
+        # Filter to only providers actually available in this ONNX Runtime build
+        try:
+            import onnxruntime as ort
+            available = set(ort.get_available_providers())
+            exec_providers = [p for p in exec_providers if p in available]
+            if not exec_providers:
+                exec_providers = ["CPUExecutionProvider"]
+            logger.info("ONNX Runtime providers (available): %s", exec_providers)
+        except ImportError:
+            pass
+
         self._app = FaceAnalysis(
             name=model_pack,
-            providers=providers,
+            providers=exec_providers,
         )
         self._app.prepare(ctx_id=0 if use_gpu else -1, det_size=(detection_resize_width, detection_resize_width))
 

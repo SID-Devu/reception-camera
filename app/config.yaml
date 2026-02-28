@@ -3,13 +3,16 @@
 # ============================================================
 
 camera:
-  # Camera source: integer for USB device index, or RTSP URL string
-  source: 0
+  # Camera source: integer for USB device index, RTSP URL string,
+  # or "auto" to auto-discover the best available camera.
+  source: "auto"
   width: 1280
   height: 720
   fps: 30
   # How many frames to skip between face-detection passes (perf tuning)
   detect_every_n_frames: 3
+  # Use GStreamer backend for CSI/RTSP cameras (auto-configured on RPi/RB5)
+  use_gstreamer: false
 
 face_detection:
   # Minimum detection confidence (0.0-1.0)
@@ -69,6 +72,8 @@ tts:
   engine: "pyttsx3"
   rate: 170           # speech rate (words per minute)
   volume: 0.9         # 0.0 - 1.0
+  # Auto-detect connected speakers. If none found, TTS is silently disabled.
+  auto_detect_speaker: true
 
 database:
   # SQLite database path (relative to app/ directory)
@@ -86,3 +91,15 @@ performance:
   detection_resize_width: 640
   # Use GPU if available
   use_gpu: false
+  # ONNX Runtime execution providers (auto-tuned by hardware detection)
+  # Example: ["QNNExecutionProvider", "CUDAExecutionProvider", "CPUExecutionProvider"]
+  providers: []
+
+# ---- Hardware auto-detection ----
+hardware:
+  # Run hardware detection at startup to auto-tune config for RPi, RB5, etc.
+  auto_detect: true
+  # Scan local network for RTSP / CCTV cameras on port 554
+  scan_network_cameras: true
+  # Explicit RTSP camera URLs (always added to discovered cameras)
+  rtsp_urls: []

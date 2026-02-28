@@ -1,0 +1,84 @@
+# ============================================================
+# Reception Greeter – Qualcomm Robotics RB5 Optimised Config
+# ============================================================
+# Auto-generated profile for Qualcomm QRB5165 (RB5 Dev Kit).
+# Tuned for Kryo 585 CPU, Adreno 650 GPU, Hexagon 698 DSP,
+# and optional Qualcomm Neural Network (QNN) SDK acceleration.
+# ============================================================
+
+camera:
+  # "auto" = auto-discover best available camera (USB, MIPI-CSI, or RTSP)
+  source: "auto"
+  width: 1280
+  height: 720
+  fps: 30
+  detect_every_n_frames: 2
+  # GStreamer via qtiqmmfsrc for MIPI-CSI cameras
+  use_gstreamer: true
+
+face_detection:
+  min_confidence: 0.50
+  min_face_size: 60
+  # RB5 has 8GB RAM + powerful CPU – can handle full model
+  model_pack: "buffalo_l"
+
+recognition:
+  similarity_threshold: 0.40
+  consecutive_frames_required: 3
+
+tracking:
+  max_link_distance: 120
+  max_frames_missing: 10
+
+door_line:
+  orientation: "horizontal"
+  position: 0.50
+  inside_direction: "below"
+
+greeting:
+  mode: "presence"
+  cooldown_seconds: 300
+  entry_template: "Hey {name}, welcome! Have a nice day."
+  exit_template: "Bye {name}, see you later!"
+  unknown_entry: "Hello! Please check in at reception."
+  unknown_exit: "Goodbye! Have a nice day."
+
+enrollment:
+  num_samples: 20
+  min_face_width_px: 60
+  max_yaw_degrees: 45
+  max_pitch_degrees: 45
+  min_blur_laplacian: 25.0
+  min_brightness: 30
+  max_brightness: 235
+
+tts:
+  engine: "pyttsx3"
+  rate: 170
+  volume: 0.9
+  auto_detect_speaker: true
+
+database:
+  path: "../data/faces.db"
+
+logging:
+  level: "INFO"
+  file: "../logs/reception.log"
+  audit_file: "../logs/audit.log"
+
+performance:
+  detection_resize_width: 640
+  # Enable QNN/GPU if QNN SDK is installed
+  use_gpu: true
+  # Number of threads for CPU inference (Kryo 585 has 8 cores)
+  num_threads: 8
+  # ONNX Runtime execution providers (in priority order)
+  # QNNExecutionProvider uses Hexagon DSP / Adreno GPU via QNN SDK
+  providers:
+    - "QNNExecutionProvider"
+    - "CPUExecutionProvider"
+
+hardware:
+  auto_detect: true
+  scan_network_cameras: true
+  rtsp_urls: []
