@@ -75,7 +75,7 @@ class CentroidTracker:
     def __init__(
         self,
         max_link_distance: float = 120.0,
-        max_frames_missing: int = 15,
+        max_frames_missing: int = 8,
     ) -> None:
         self._next_id = 0
         self._tracks: OrderedDict[int, Track] = OrderedDict()

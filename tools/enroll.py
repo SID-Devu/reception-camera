@@ -105,6 +105,7 @@ def enroll(
     detector: FaceDetector,
     num_samples: int = 20,
     no_display: bool = False,
+    role: str = "",
 ) -> bool:
     """
     Enrollment: open camera, capture face samples with quality checks.
@@ -117,14 +118,21 @@ def enroll(
     enroll_cfg = config.get("enrollment", {})
     cam_cfg = config.get("camera", {})
 
-    min_face_width = enroll_cfg.get("min_face_width_px", 80)
-    max_yaw = enroll_cfg.get("max_yaw_degrees", 35)
-    max_pitch = enroll_cfg.get("max_pitch_degrees", 25)
-    min_blur = enroll_cfg.get("min_blur_laplacian", 50.0)
-    min_brightness = enroll_cfg.get("min_brightness", 40)
-    max_brightness = enroll_cfg.get("max_brightness", 220)
+    min_face_width = enroll_cfg.get("min_face_width_px", 60)
+    max_yaw = enroll_cfg.get("max_yaw_degrees", 45)
+    max_pitch = enroll_cfg.get("max_pitch_degrees", 45)
+    min_blur = enroll_cfg.get("min_blur_laplacian", 25.0)
+    min_brightness = enroll_cfg.get("min_brightness", 30)
+    max_brightness = enroll_cfg.get("max_brightness", 235)
 
     source = cam_cfg.get("source", 0)
+    if isinstance(source, str) and source.lower() == "auto":
+        try:
+            from app.hardware.camera_discovery import discover_cameras
+            cams = discover_cameras(validate=True, scan_network=False)
+            source = cams[0].source if cams else 0
+        except Exception:
+            source = 0
     cap = cv2.VideoCapture(source)
     if not cap.isOpened():
         print(f"[ERROR] Cannot open camera source: {source}")
@@ -257,7 +265,7 @@ def enroll(
             return False
 
     # Save to database
-    person_id = db.add_person(name)
+    person_id = db.add_person(name, role)
     db.add_embeddings_bulk(person_id, embeddings, quality_scores)
     print(f"\n[OK] Enrolled '{name}' with {len(embeddings)} embeddings (person_id={person_id})")
     return True
@@ -270,13 +278,14 @@ def re_enroll(
     detector: FaceDetector,
     num_samples: int = 20,
     no_display: bool = False,
+    role: str = "",
 ) -> bool:
     """Delete existing enrollment and re-enroll."""
     person = db.get_person_by_name(name)
     if person:
         db.delete_person(person["person_id"])
         print(f"[INFO] Deleted existing enrollment for '{name}'")
-    return enroll(name, config, db, detector, num_samples, no_display=no_display)
+    return enroll(name, config, db, detector, num_samples, no_display=no_display, role=role)
 
 
 def main():
@@ -308,9 +317,9 @@ def main():
     )
 
     if args.force:
-        success = re_enroll(args.name, config, db, detector, num_samples, no_display=args.no_display)
+        success = re_enroll(args.name, config, db, detector, num_samples, no_display=args.no_display, role=args.role)
     else:
-        success = enroll(args.name, config, db, detector, num_samples, no_display=args.no_display)
+        success = enroll(args.name, config, db, detector, num_samples, no_display=args.no_display, role=args.role)
 
     db.close()
     sys.exit(0 if success else 1)

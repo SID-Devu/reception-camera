@@ -251,7 +251,7 @@ Enrolled people:
 **Test 2: See recent greetings**
 
 ```bash
-python tools/admin.py --config app/config.yaml events --last 10
+python tools/admin.py --config app/config.yaml events --limit 10
 ```
 
 Expected output:
@@ -480,29 +480,29 @@ python app/main.py --no-tts --config app/config.yaml
 
 ```bash
 # List everyone
-python tools/admin.py list --config app/config.yaml
+python tools/admin.py --config app/config.yaml list
 
 # Show person details
-python tools/admin.py info --name "Alice" --config app/config.yaml
+python tools/admin.py --config app/config.yaml info --name "Alice"
 
 # Delete person
-python tools/admin.py delete --name "Alice" --config app/config.yaml
+python tools/admin.py --config app/config.yaml delete --name "Alice"
 
 # See recent events
-python tools/admin.py events --last 50 --config app/config.yaml
+python tools/admin.py --config app/config.yaml events --limit 50
 
 # See statistics
-python tools/admin.py stats --config app/config.yaml
+python tools/admin.py --config app/config.yaml stats
 ```
 
 ### Database
 
 ```bash
 # Backup database to JSON
-python tools/export_db.py export backup.json --config app/config.yaml
+python tools/export_db.py --config app/config.yaml export --output backup.json
 
 # Restore database from JSON
-python tools/export_db.py import backup.json --config app/config.yaml
+python tools/export_db.py --config app/config.yaml import --input backup.json
 ```
 
 ---
@@ -570,6 +570,7 @@ person appears:
 |-----|--------|
 | `q` | Quit (says goodbye first) |
 | `r` | Hot-reload face database after new enrollment |
+| `ESC` | Also quits |
 
 ---
 
@@ -631,6 +632,10 @@ reception-camera/
 │   ├── db/
 │   │   ├── storage.py       # SQLite database access
 │   │   └── schema.sql       # Database schema
+│   ├── hardware/            # Auto-detection (RPi, RB5, Jetson, x86)
+│   │   ├── detector.py      # Platform & accelerator detection
+│   │   ├── camera_discovery.py  # USB/CSI/RTSP camera scanning
+│   │   └── audio_discovery.py   # Speaker/audio output discovery
 │   └── vision/
 │       ├── camera.py        # Camera reader (background thread)
 │       ├── face_detect.py   # SCRFD face detector
@@ -641,7 +646,14 @@ reception-camera/
 ├── tools/                    # Utility scripts
 │   ├── enroll.py            # Enrol new person
 │   ├── admin.py             # Manage database
+│   ├── export_db.py         # Export/import database
 │   └── download_models.py   # Download AI models
+├── scripts/                  # Dev/ops scripts
+│   ├── benchmark.py         # Pipeline benchmark
+│   ├── cleanup_old_data.py  # Cleanup old events
+│   ├── seed_db.py           # Seed test data
+│   ├── export_embeddings.py # Export embeddings to JSON
+│   └── setup_edge_device.sh # Edge device installer
 ├── data/                     # Stores database
 ├── logs/                     # Stores logs
 └── README.md                # This file

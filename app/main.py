@@ -55,7 +55,7 @@ def setup_logging(config: dict) -> None:
 
     log_file = log_cfg.get("file", "../logs/reception.log")
     if not os.path.isabs(log_file):
-        log_file = os.path.join(_PROJECT_ROOT, log_file.lstrip("../"))
+        log_file = os.path.join(_PROJECT_ROOT, log_file.removeprefix("../"))
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
 
     handlers = [
@@ -74,7 +74,7 @@ def setup_audit_log(config: dict) -> logging.Logger:
     log_cfg = config.get("logging", {})
     audit_file = log_cfg.get("audit_file", "../logs/audit.log")
     if not os.path.isabs(audit_file):
-        audit_file = os.path.join(_PROJECT_ROOT, audit_file.lstrip("../"))
+        audit_file = os.path.join(_PROJECT_ROOT, audit_file.removeprefix("../"))
     os.makedirs(os.path.dirname(audit_file), exist_ok=True)
 
     audit_logger = logging.getLogger("audit")
@@ -155,7 +155,7 @@ class ReceptionPipeline:
         trk_cfg = config.get("tracking", {})
         self.tracker = CentroidTracker(
             max_link_distance=trk_cfg.get("max_link_distance", 120),
-            max_frames_missing=trk_cfg.get("max_frames_missing", 15),
+            max_frames_missing=trk_cfg.get("max_frames_missing", 8),
         )
 
         # ---- Event detector (presence or door_line mode) ----
@@ -223,10 +223,10 @@ class ReceptionPipeline:
             cam_cfg.setdefault("fps", hw.recommended_fps)
             cam_cfg.setdefault("detect_every_n_frames", hw.recommended_detect_every_n)
 
-            det_cfg["model_pack"] = hw.recommended_model_pack
-            perf_cfg["detection_resize_width"] = hw.recommended_det_size
-            perf_cfg["use_gpu"] = hw.recommended_use_gpu
-            perf_cfg["providers"] = hw.recommended_providers
+            det_cfg.setdefault("model_pack", hw.recommended_model_pack)
+            perf_cfg.setdefault("detection_resize_width", hw.recommended_det_size)
+            perf_cfg.setdefault("use_gpu", hw.recommended_use_gpu)
+            perf_cfg.setdefault("providers", hw.recommended_providers)
 
             # Enable GStreamer on ARM platforms with CSI cameras
             if hw.has_camera_csi:
@@ -326,6 +326,8 @@ class ReceptionPipeline:
         """Main blocking loop. Press 'q' in the display window to exit."""
         self.start()
         signal.signal(signal.SIGINT, lambda *_: self._signal_stop())
+        if hasattr(signal, "SIGTERM"):
+            signal.signal(signal.SIGTERM, lambda *_: self._signal_stop())
 
         self.logger.info("Entering main loop. Press 'q' to quit.")
 
@@ -372,10 +374,7 @@ class ReceptionPipeline:
 
                     # Check for greeting / goodbye events
                     if self.event_detector:
-                        if isinstance(self.event_detector, PresenceEventDetector):
-                            events = self.event_detector.check_tracks(tracks, lost_tracks)
-                        else:
-                            events = self.event_detector.check_tracks(tracks, lost_tracks)
+                        events = self.event_detector.check_tracks(tracks, lost_tracks)
                         for event in events:
                             self._handle_event(event)
                 else:
@@ -389,7 +388,7 @@ class ReceptionPipeline:
                     display = self._draw_overlay(frame, tracks)
                     cv2.imshow("Reception Greeter", display)
                     key = cv2.waitKey(1) & 0xFF
-                    if key == ord("q"):
+                    if key == ord("q") or key == 27:  # 'q' or ESC
                         self.logger.info("Quit key pressed")
                         break
                     elif key == ord("r"):
@@ -401,7 +400,7 @@ class ReceptionPipeline:
             self.stop()
 
     def _signal_stop(self) -> None:
-        self.logger.info("SIGINT received – stopping")
+        self.logger.info("Signal received - stopping")
         self._running = False
 
     # ------------------------------------------------------------------ #

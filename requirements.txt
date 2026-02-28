@@ -1,8 +1,14 @@
-opencv-python==4.13.0
-numpy==2.4.2
-insightface==0.7.3
-onnxruntime==1.24.1
-scipy==1.17.0
-pyttsx3==2.99
-PyYAML==6.0.3
-albumentations==1.4.24
+# ============================================================
+# Reception Greeter – Python Dependencies (pinned)
+# ============================================================
+# For flexible ranges, use: app/requirements.txt
+
+opencv-python>=4.8.0
+numpy>=1.24.0
+insightface>=0.7.3
+onnxruntime>=1.16.0
+scipy>=1.11.0
+pyttsx3>=2.90
+PyYAML>=6.0
+Pillow>=10.0.0
+scikit-learn>=1.3.0
