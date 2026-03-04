@@ -2,6 +2,51 @@
 
 All notable changes to the Reception Greeter project will be documented in this file.
 
+## [1.3.0] - README Rewrite, User Guide Audit, Documentation Accuracy
+
+### Changed
+- **README.md completely rewritten**
+  - Removed all emojis for clean, professional documentation
+  - Added "Quick Start (All Platforms)" section at the top with one-command setup
+  - Separate clear paths for Windows, Linux/macOS, and edge devices
+  - Added "Supported Platforms" table (Windows, macOS Intel/ARM, Ubuntu, RB5, RPi, Jetson)
+  - Updated architecture diagram with all new scripts (setup_rb5.sh, deploy_rb5.sh, validate.sh, docker/, docs/)
+  - Added "Post-Setup Validation" commands reference
+  - Version updated to 1.3.0
+  - Fresh-engineer friendly: a new developer can go from zero to running in one command
+
+### Fixed (User Guide Cross-Reference Audit)
+All scripts and docs audited against the 89-page Qualcomm RB5 User Guide (80-88500-5 Rev. AF):
+
+- **setup_rb5.sh - DIP switch table corrected:**
+  - Pin 5: Fixed from "IMU sensor ON (default)" to "OFF = SPI to onboard IMU; ON = SPI to LS3 connector"
+  - Pin 4: Expanded to "OFF = DSI0 to HDMI bridge (LT9611UCX); ON = DSI0 to HS1 connector"
+  - Added Vision Mezzanine DIP2 Pin 2 note (required ON for DMIC recording)
+- **setup_rb5.sh - Added tinyALSA DMIC recording path:**
+  - 4 commands using DMIC3 (not DMIC2 like the ALSA path), per User Guide page 66
+- **setup_rb5.sh - SoC specs corrected:**
+  - "Hexagon 698" changed to "Hexagon DSP" (PDF does not specify model number)
+  - "Qualcomm AI Engine" changed to "NPU230" (per PDF naming)
+- **RB5_DEPLOYMENT.md - DMIC section fixed:**
+  - Added missing SampleRate and Format commands for full 8-command ALSA DMIC path
+  - Added tinyALSA DMIC alternative (4 commands with DMIC3)
+- **RB5_DEPLOYMENT.md - wpa_supplicant.conf fixed:**
+  - Removed ctrl_interface/update_config (not in PDF)
+  - Added pairwise=TKIP CCMP and group=TKIP CCMP fields (per PDF)
+- **RB5_DEPLOYMENT.md - Hardware specs corrected:**
+  - HDMI: "HDMI 1.4, 4K30" changed to "HDMI (LT9611UCX bridge), 4K at 60 Hz"
+  - DSP: "Hexagon 698" changed to "Hexagon DSP"
+  - NPU: "Qualcomm AI Engine" changed to "NPU230"
+- **RB5_DEPLOYMENT.md - GStreamer pipelines fixed:**
+  - Added (memory:GBM) caps annotation for hardware-accelerated zero-copy GPU buffer paths
+  - Added camera index mapping: camera=0 = IMX577, camera=1 = OV9282
+- **RB5_DEPLOYMENT.md - DIP switch table:**
+  - Same Pin 4/5 corrections as setup_rb5.sh
+  - Added Vision Mezzanine DIP2 note
+
+### Version Updates
+- README.md: 1.2.0 -> 1.3.0
+
 ## [1.2.0] - Installation Improvements & Beginner Documentation
 
 ### Added

@@ -4,13 +4,70 @@ Real-time face-recognition camera system that **greets people by name** when the
 
 **What it does:**
 ```
-Your Camera → Detects Faces → Recognizes People → Plays Audio Greeting
+Your Camera -> Detects Faces -> Recognizes People -> Plays Audio Greeting
 "Hey Alice, welcome! Have a nice day!"
 ```
 
 ---
 
-## 🎯 Quick Overview
+## Quick Start (All Platforms)
+
+The fastest way to get running. Works on **Windows 10/11**, **macOS** (Intel and Apple Silicon), and **Linux** (Ubuntu/Debian).
+
+### One-Command Setup (Linux / macOS)
+
+```bash
+git clone https://github.com/SID-Devu/reception-camera.git
+cd reception-camera
+chmod +x setup.sh
+sudo ./setup.sh
+```
+
+The setup script will automatically:
+1. Detect your platform and OS
+2. Install system dependencies (Python, OpenCV, GStreamer, audio libraries)
+3. Create a Python virtual environment
+4. Install all Python packages (including insightface, onnxruntime)
+5. Download AI models (~350MB, one-time)
+6. Configure camera, audio, and display
+7. Install a systemd service for auto-start (Linux only)
+
+### Windows Setup
+
+```bash
+git clone https://github.com/SID-Devu/reception-camera.git
+cd reception-camera
+
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+# Install dependencies
+python install.py
+
+# Download AI models
+python tools/download_models.py
+
+# Run
+python app/main.py --config app/config.yaml
+```
+
+### Edge Devices (Qualcomm RB5, Raspberry Pi, NVIDIA Jetson)
+
+```bash
+# On the device:
+cd /opt
+git clone https://github.com/SID-Devu/reception-camera.git
+cd reception-camera
+chmod +x setup.sh scripts/*.sh
+sudo ./setup.sh
+```
+
+For RB5-specific board configuration, deployment from a host machine, and hardware reference, see [docs/RB5_DEPLOYMENT.md](docs/RB5_DEPLOYMENT.md).
+
+---
+
+## Quick Overview
 
 | Feature | What It Means |
 |---------|---------------|
@@ -23,7 +80,7 @@ Your Camera → Detects Faces → Recognizes People → Plays Audio Greeting
 
 ---
 
-## ✅ Before You Start - Quick Checklist
+## Before You Start - Quick Checklist
 
 Before installing, make sure you have:
 
@@ -57,7 +114,7 @@ python -c "import cv2; cap = cv2.VideoCapture(0); print('OK' if cap.isOpened() e
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 | Item | Requirements | Notes |
 |------|--------------|-------|
@@ -70,15 +127,17 @@ python -c "import cv2; cap = cv2.VideoCapture(0); print('OK' if cap.isOpened() e
 
 | Laptop Type | What to Expect | Performance |
 |------------|---|---|
-| **New/Gaming Laptop** | Everything will work smoothly | ⚡ 30+ FPS, instant recognition |
-| **Mid-range Laptop** | Runs well, slight delays possible | ⚡ 15-20 FPS |
-| **Old Laptop (5+ years)** | Will work but slower | 🐢 5-10 FPS, might be sluggish |
+| **New/Gaming Laptop** | Everything will work smoothly | 30+ FPS, instant recognition |
+| **Mid-range Laptop** | Runs well, slight delays possible | 15-20 FPS |
+| **Old Laptop (5+ years)** | Will work but slower | 5-10 FPS, might be sluggish |
 
 > **For old laptops:** The system still works but may take 2-3 seconds to recognize someone. This is normal.
 
 ---
 
-## 🚀 Installation (For Everyone)
+## Manual Installation (Step by Step)
+
+If you prefer manual setup over `setup.sh`, follow these steps.
 
 **Estimated time:** 10-15 minutes (depending on your internet speed)
 
@@ -89,12 +148,6 @@ git clone https://github.com/SID-Devu/reception-camera.git
 cd reception-camera
 ```
 
-Expected output:
-```
-Cloning into 'reception-camera'...
-✓ Cloned successfully to your computer
-```
-
 ### Step 2: Check Your Python Installation
 
 ```bash
@@ -102,16 +155,11 @@ Cloning into 'reception-camera'...
 python --version
 ```
 
-Expected output:
-```
-Python 3.12.3
-```
-
 > **Doesn't show version?** [Install Python here](https://www.python.org/downloads/)
 
-### Step 3: Create a Virtual Environment (Isolated Python)
+### Step 3: Create a Virtual Environment
 
-A virtual environment keeps this project separate from other Python projects on your laptop.
+A virtual environment keeps this project separate from other Python projects on your machine.
 
 ```bash
 # Windows
@@ -123,12 +171,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Expected output:
-```
-(.venv) C:\Users\YourName\reception-camera>
-```
-
-> Note: `(.venv)` at the start shows the virtual environment is active.
+You'll see `(.venv)` at the start of your prompt when the virtual environment is active.
 
 ### Step 4: Install All Dependencies
 
@@ -154,16 +197,6 @@ sudo apt-get install python3-dev python3.12-dev build-essential
 pip install --prefer-binary insightface opencv-python
 ```
 
-Expected output:
-```
-Collecting opencv-python
-  Downloading opencv_python-4.13.0...
-...
-Successfully installed insightface-0.7.3
-```
-
-> **Installation takes 2-5 minutes** depending on your internet. Be patient!
-
 ### Step 5: Download Face Recognition Models
 
 This downloads the face recognition AI (~350MB) once. After this, it's stored locally and works offline.
@@ -172,20 +205,9 @@ This downloads the face recognition AI (~350MB) once. After this, it's stored lo
 python tools/download_models.py
 ```
 
-Expected output:
-```
-✅ Models downloaded and cached successfully!
-```
-
-> **Note:** This might take 2-3 minutes on slow internet. Grab ☕ coffee!
-
-### ✅ Setup Complete!
-
-You're ready to use the system. Go to the next section based on what you want to do.
-
 ---
 
-## 👨‍💼 For Engineers: Testing & Development
+## For Engineers: Testing and Development
 
 ### Quick Test: Run the Live Camera
 
@@ -228,11 +250,6 @@ done
 2. System quality-checks each sample (blur, lighting, face size)
 3. Stores the face data in database
 
-**Expected output:**
-```
-✅ Enrolled Alice with 15 samples (quality: 95%)
-```
-
 ### Verify It Works
 
 **Test 1: See who's in the database**
@@ -241,23 +258,10 @@ done
 python tools/admin.py --config app/config.yaml list
 ```
 
-Expected output:
-```
-Enrolled people:
-  1. Alice    (15 samples, quality 95%)
-  2. Bob      (18 samples, quality 98%)
-```
-
 **Test 2: See recent greetings**
 
 ```bash
 python tools/admin.py --config app/config.yaml events --limit 10
-```
-
-Expected output:
-```
-2025-02-19 14:30:22 - ENTRY - Alice
-2025-02-19 14:30:30 - EXIT  - Alice
 ```
 
 **Test 3: Full end-to-end test**
@@ -274,7 +278,7 @@ Then:
 
 ---
 
-## 🧪 For Manual Testers: Testing Checklist
+## For Manual Testers: Testing Checklist
 
 Use this to manually test the system before deployment.
 
@@ -294,61 +298,42 @@ Use this to manually test the system before deployment.
 
 ### Manual Test Scenarios
 
-#### Test 1: Basic Entry Greeting ✅
-- [ ] Face appears in camera →
-- [ ] System shows bounding box →
+#### Test 1: Basic Entry Greeting
+- [ ] Face appears in camera
+- [ ] System shows bounding box
 - [ ] Hears: "Hey Alice, welcome! Have a nice day."
 
 **Expected behavior:** Greeting plays in 3-5 seconds
 
-**If it fails:**
-- Check system volume is not muted
-- Move closer to camera
-- Check microphone/speakers are connected
-
-#### Test 2: Exit/Goodbye Greeting ✅
-- [ ] Greeted person looks away →
-- [ ] Wait 3-5 seconds →
+#### Test 2: Exit/Goodbye Greeting
+- [ ] Greeted person looks away
+- [ ] Wait 3-5 seconds
 - [ ] Hears: "Bye Alice, see you later!"
 
-**Expected behavior:** Goodbye plays when leaving camera view
-
-**If it fails:**
-- Make sure person was fully recognized (check bounding box)
-- Wait 5+ seconds before testing goodbye
-- Check system volume
-
-#### Test 3: Multiple People at Once ✅
-- [ ] Put 2-3 faces in camera →
-- [ ] Should recognize all simultaneously →
+#### Test 3: Multiple People at Once
+- [ ] Put 2-3 faces in camera
+- [ ] Should recognize all simultaneously
 - [ ] Should hear all greetings in sequence
 
-**Expected behavior:** All recognized people are greeted within 5 seconds
-
-#### Test 4: Old Laptop Test (if available) ✅
+#### Test 4: Old Laptop Test (if available)
 - [ ] Run on older machine
 - [ ] Should see live feed (might be slower)
 - [ ] Recognition should work (5-20 seconds acceptable)
-- [ ] All features should function
 
 **Note:** Older laptops are 5-10x slower. This is normal and acceptable.
 
-#### Test 5: Repeated Recognition (Cooldown) ✅
+#### Test 5: Repeated Recognition (Cooldown)
 - [ ] Greet Alice
 - [ ] Alice leaves
 - [ ] Alice comes back within 5 minutes
 - [ ] Should NOT greet again (5-minute cooldown)
 - [ ] After 5 minutes, should greet again
 
-**Expected behavior:** Respects cooldown timer to avoid spam
-
-#### Test 6: Database Persistence ✅
+#### Test 6: Database Persistence
 - [ ] Check people list: `python tools/admin.py list`
 - [ ] Stop system (Ctrl+C)
 - [ ] Start system again
 - [ ] People list should be identical
-
-**Expected behavior:** All data survives restart
 
 ### Test Results Template
 
@@ -358,12 +343,12 @@ Laptop:        New / Mid-range / Old
 Python:        3.12.3
 Date:          2025-02-19
 
-Test 1 - Entry Greeting:    ✅ PASS / ❌ FAIL
-Test 2 - Exit Greeting:     ✅ PASS / ❌ FAIL
-Test 3 - Multiple People:   ✅ PASS / ❌ FAIL
-Test 4 - Old Laptop:        ✅ PASS / ❌ FAIL
-Test 5 - Cooldown:          ✅ PASS / ❌ FAIL
-Test 6 - Database:          ✅ PASS / ❌ FAIL
+Test 1 - Entry Greeting:    PASS / FAIL
+Test 2 - Exit Greeting:     PASS / FAIL
+Test 3 - Multiple People:   PASS / FAIL
+Test 4 - Old Laptop:        PASS / FAIL
+Test 5 - Cooldown:          PASS / FAIL
+Test 6 - Database:          PASS / FAIL
 
 Issues Found:
 - (none) / list here
@@ -371,7 +356,7 @@ Issues Found:
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Linux: "python3-venv package not installed"
 
@@ -413,10 +398,10 @@ python -c "import cv2; cap = cv2.VideoCapture(0); print('OK' if cap.isOpened() e
 ```
 
 **Solutions:**
-- [ ] Reconnect USB webcam (if using external)
-- [ ] Restart program
-- [ ] Try different USB port
-- [ ] In `app/config.yaml`, change `source: 0` to `source: 1` (if multiple cameras)
+- Reconnect USB webcam (if using external)
+- Restart program
+- Try different USB port
+- In `app/config.yaml`, change `source: 0` to `source: 1` (if multiple cameras)
 
 ### "No sound / greeting not playing"
 
@@ -426,19 +411,19 @@ python -c "import pyttsx3; e = pyttsx3.init(); e.say('test'); e.runAndWait()"
 ```
 
 **Solutions:**
-- [ ] Check system volume is on
-- [ ] Unmute speakers
-- [ ] Check `app/config.yaml` - `tts.volume: 0.9`
-- [ ] **macOS:** System volume controls output (set to 50%+ in System Preferences)
-- [ ] **Linux:** Install espeak: `sudo apt install espeak`
+- Check system volume is on
+- Unmute speakers
+- Check `app/config.yaml` - `tts.volume: 0.9`
+- **macOS:** System volume controls output (set to 50%+ in System Preferences)
+- **Linux:** Install espeak: `sudo apt install espeak`
 
 ### "Face not recognized"
 
 **Solutions:**
-- [ ] Improve lighting (move closer to window or light)
-- [ ] Re-enroll person with better samples
-- [ ] Increase max samples: `python tools/enroll.py --name "Person" --min-samples 20`
-- [ ] Lower similarity threshold in `app/config.yaml`: `similarity_threshold: 0.35`
+- Improve lighting (move closer to window or light)
+- Re-enroll person with better samples
+- Increase max samples: `python tools/enroll.py --name "Person" --min-samples 20`
+- Lower similarity threshold in `app/config.yaml`: `similarity_threshold: 0.35`
 
 ### "Installation failed - Microsoft Visual C++ required"
 
@@ -461,7 +446,7 @@ pip install --force-reinstall insightface
 
 ---
 
-## 📖 Full Commands Reference
+## Full Commands Reference
 
 ### Starting the System
 
@@ -505,9 +490,18 @@ python tools/export_db.py --config app/config.yaml export --output backup.json
 python tools/export_db.py --config app/config.yaml import --input backup.json
 ```
 
+### Post-Setup Validation
+
+```bash
+./scripts/validate.sh          # Full health check
+./scripts/validate.sh --quick  # Fast check
+./scripts/validate.sh --fix    # Auto-fix issues
+./scripts/validate.sh --json   # JSON output
+```
+
 ---
 
-## ⚙️ Configuration (For Advanced Users)
+## Configuration
 
 All settings are in `app/config.yaml`. Edit to customize behavior:
 
@@ -541,59 +535,38 @@ performance:
   use_gpu: false             # Set to true if using NVIDIA GPU
 ```
 
-```bash
-# GUI mode - shows camera preview, captures face samples
-python tools/enroll.py --config app/config.yaml --name "Alice"
+### Common Tuning Parameters
 
-# Headless mode (e.g. SSH / no monitor)
-python tools/enroll.py --config app/config.yaml --name "Alice" --no-display
-```
-
-The tool captures 10-20 face samples with quality checks (blur, pose, brightness)
-and stores 512-dim ArcFace embeddings in `data/faces.db`.
-
-### 7. Run the greeter
-
-```bash
-python app/main.py --config app/config.yaml
-```
-
-A window opens showing the camera feed with bounding boxes. When a recognised
-person appears:
-
-- **ENTRY:** "Hey Alice, welcome! Have a nice day."
-- **EXIT:** "Bye Alice, see you later!" (when face leaves view)
-
-**Hotkeys in the display window:**
-
-| Key | Action |
-|-----|--------|
-| `q` | Quit (says goodbye first) |
-| `r` | Hot-reload face database after new enrollment |
-| `ESC` | Also quits |
+| Setting | What It Does | Default | Tip |
+|---------|------------|---------|-----|
+| `similarity_threshold` | How strict face matching is | 0.40 | Lower (0.30) = more lenient |
+| `consecutive_frames_required` | Frames before greeting | 3 | Lower = faster greeting |
+| `max_frames_missing` | Frames before EXIT event | 8 | Lower = faster goodbye |
+| `min_face_size` | Minimum face pixel width | 60 | Lower = detects distant faces |
+| `cooldown_seconds` | Time before re-greeting | 300 | Set to 0 to always greet |
 
 ---
 
-## 📚 How It Works (Technical Details)
+## How It Works
 
 ### The Processing Pipeline
 
 ```
 Your Camera
-    ↓
+    |
 Frame arrives at 30 FPS
-    ↓
+    |
 Every 3rd frame, detect faces using SCRFD
-    ↓
+    |
 For each face, extract ArcFace feature (512-dim vector)
-    ↓
+    |
 Compare against database of known faces (cosine similarity)
-    ↓
+    |
 Track faces across frames using centroid distance
-    ↓
-When streak reaches 3 frames: Fire ENTRY event → Play greeting audio
-    ↓
-When face leaves frame: Fire EXIT event → Play goodbye audio
+    |
+When streak reaches 3 frames: Fire ENTRY event -> Play greeting audio
+    |
+When face leaves frame: Fire EXIT event -> Play goodbye audio
 ```
 
 ### Key Components
@@ -606,73 +579,85 @@ When face leaves frame: Fire EXIT event → Play goodbye audio
 
 ---
 
-## 🔧 Advanced Configuration
-
-See `app/config.yaml` for full settings. Common tuning parameters:
-
-| Setting | What It Does | Default | Tip |
-|---------|------------|---------|-----|
-| `similarity_threshold` | How strict face matching is | 0.40 | Lower (0.30) = more lenient |
-| `consecutive_frames_required` | Frames before greeting | 3 | Lower = faster greeting |
-| `max_frames_missing` | Frames before EXIT event | 8 | Lower = faster goodbye |
-| `min_face_size` | Minimum face pixel width | 60 | Lower = detects distant faces |
-| `cooldown_seconds` | Time before re-greeting | 300 | Set to 0 to always greet |
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```
 reception-camera/
-├── app/                      # Main application
-│   ├── main.py              # Entry point (vision pipeline)
-│   ├── config.yaml          # All settings
-│   ├── audio/
-│   │   └── tts.py           # Text-to-speech engine (background thread)
-│   ├── db/
-│   │   ├── storage.py       # SQLite database access
-│   │   └── schema.sql       # Database schema
-│   ├── hardware/            # Auto-detection (RPi, RB5, Jetson, x86)
-│   │   ├── detector.py      # Platform & accelerator detection
-│   │   ├── camera_discovery.py  # USB/CSI/RTSP camera scanning
-│   │   └── audio_discovery.py   # Speaker/audio output discovery
-│   └── vision/
-│       ├── camera.py        # Camera reader (background thread)
-│       ├── face_detect.py   # SCRFD face detector
-│       ├── embedder.py      # ArcFace embedding extractor
-│       ├── matcher.py       # Cosine similarity matcher
-│       ├── tracker.py       # Centroid tracker
-│       └── events.py        # ENTRY/EXIT event detector
-├── tools/                    # Utility scripts
-│   ├── enroll.py            # Enrol new person
-│   ├── admin.py             # Manage database
-│   ├── export_db.py         # Export/import database
-│   └── download_models.py   # Download AI models
-├── scripts/                  # Dev/ops scripts
-│   ├── benchmark.py         # Pipeline benchmark
-│   ├── cleanup_old_data.py  # Cleanup old events
-│   ├── seed_db.py           # Seed test data
-│   ├── export_embeddings.py # Export embeddings to JSON
-│   └── setup_edge_device.sh # Edge device installer
-├── data/                     # Stores database
-├── logs/                     # Stores logs
-└── README.md                # This file
+|-- app/                           # Main application
+|   |-- main.py                    # Entry point (vision pipeline)
+|   |-- config.yaml                # Default settings
+|   |-- config_rb5.yaml            # RB5-specific settings
+|   |-- audio/
+|   |   +-- tts.py                 # Text-to-speech engine (background thread)
+|   |-- db/
+|   |   |-- storage.py             # SQLite database access
+|   |   +-- schema.sql             # Database schema
+|   |-- hardware/                  # Auto-detection (RPi, RB5, Jetson, x86)
+|   |   |-- detector.py            # Platform and accelerator detection
+|   |   |-- camera_discovery.py    # USB/CSI/RTSP camera scanning
+|   |   +-- audio_discovery.py     # Speaker/audio output discovery
+|   +-- vision/
+|       |-- camera.py              # Camera reader (background thread)
+|       |-- face_detect.py         # SCRFD face detector
+|       |-- embedder.py            # ArcFace embedding extractor
+|       |-- matcher.py             # Cosine similarity matcher
+|       |-- tracker.py             # Centroid tracker
+|       +-- events.py              # ENTRY/EXIT event detector
+|-- tools/                         # Utility scripts
+|   |-- enroll.py                  # Enrol new person
+|   |-- admin.py                   # Manage database
+|   |-- export_db.py               # Export/import database
+|   +-- download_models.py         # Download AI models
+|-- scripts/                       # Setup and operations
+|   |-- setup_rb5.sh               # RB5 board-level config (audio, camera, display)
+|   |-- deploy_rb5.sh              # Deploy from host via ADB or SSH
+|   |-- validate.sh                # Post-setup health check
+|   |-- benchmark.py               # Pipeline benchmark
+|   |-- cleanup_old_data.py        # Cleanup old events
+|   |-- seed_db.py                 # Seed test data
+|   +-- export_embeddings.py       # Export embeddings to JSON
+|-- docker/                        # Container support
+|   |-- Dockerfile                 # Standard container image
+|   |-- Dockerfile.gpu             # GPU-accelerated image
+|   +-- docker-compose.yml         # Multi-service compose
+|-- docs/                          # Documentation
+|   +-- RB5_DEPLOYMENT.md          # Qualcomm RB5 deployment guide
+|-- setup.sh                       # Universal auto-setup (all platforms)
+|-- install.py                     # Python dependency installer
+|-- Makefile                       # Build targets (run, enroll, test, docker)
+|-- data/                          # Stores database
+|-- logs/                          # Stores logs
++-- README.md                      # This file
 ```
 
 ---
 
-## 📋 Author & License
+## Supported Platforms
+
+| Platform | Auto-Setup | Notes |
+|----------|-----------|-------|
+| **Windows 10/11** | Manual (see Quick Start) | Python + pip, no sudo needed |
+| **macOS (Intel)** | `sudo ./setup.sh` | Uses Homebrew for system deps |
+| **macOS (Apple Silicon)** | `sudo ./setup.sh` | ARM-native builds |
+| **Ubuntu / Debian** | `sudo ./setup.sh` | apt-based, systemd service |
+| **Qualcomm RB5** | `sudo ./setup.sh` | Full hardware config via setup_rb5.sh |
+| **Raspberry Pi 3/4/5** | `sudo ./setup.sh` | Lite or Desktop OS |
+| **NVIDIA Jetson** | `sudo ./setup.sh` | CUDA/TensorRT auto-detected |
+
+---
+
+## Author and License
 
 **Author:** Sudheer Ibrahim Daniel Devu ([SID-Devu](https://github.com/SID-Devu))
 
 **License:** MIT - See [LICENSE](LICENSE) file
 
-**Version:** 1.2.0  
+**Version:** 1.3.0
 **Released:** February 2026
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Want to improve the system? Contributions welcome!
 
@@ -684,8 +669,8 @@ Want to improve the system? Contributions welcome!
 
 ---
 
-## 📞 Support
+## Support
 
-Having issues? Check the **Troubleshooting** section above. 
+Having issues? Check the **Troubleshooting** section above.
 
 For bugs or feature requests, open an issue on GitHub: [Issues](https://github.com/SID-Devu/reception-camera/issues)

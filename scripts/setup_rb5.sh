@@ -129,9 +129,13 @@ check_dip_switches() {
     echo "  └─────┴──────────────────────┴─────────────────────┘"
     echo ""
     echo "  Key settings for reception-camera:"
-    echo "    • Pin 1 ON  → enables onboard digital mic"
-    echo "    • Pin 3 ON  → board auto-powers on (no button press needed)"
-    echo "    • Pin 4 OFF → HDMI output for display (if using monitor)"
+    echo "    * Pin 1 ON  -> enables onboard digital mic (DMIC)"
+    echo "    * Pin 3 ON  -> board auto-powers on (no button press needed)"
+    echo "    * Pin 4 OFF -> DSI0 routed to HDMI bridge (for HDMI output)"
+    echo "    * Pin 5 ON  -> routes SPI to LS3 connector (OFF = onboard IMU)"
+    echo ""
+    echo "  Vision Mezzanine DIP switches (if using CSI cameras):"
+    echo "    * DIP2 Pin 2 ON -> required for onboard DMIC audio recording"
     echo ""
 
     if [ "$OS_VARIANT" = "embedded" ]; then
@@ -247,7 +251,7 @@ setup_cameras() {
             info "Testing MIPI camera 0..."
             local CAM_TEST
             CAM_TEST="$(timeout 5 gst-launch-1.0 qtiqmmfsrc camera=0 num-buffers=1 ! \
-                video/x-raw,format=NV12,width=640,height=480 ! fakesink 2>&1 || echo 'FAILED')"
+                'video/x-raw(memory:GBM),format=NV12,width=640,height=480' ! fakesink 2>&1 || echo 'FAILED')"
             if echo "$CAM_TEST" | grep -qi "FAILED\|error"; then
                 warn "MIPI camera 0: Not responding (check vision mezzanine connection)"
             else
@@ -346,13 +350,25 @@ setup_audio() {
                 tinymix set 'WSA_CDC_DMA_RX_0 Audio Mixer MultiMedia1' 1
             } 2>/dev/null || true
             log "tinyALSA speaker mixer configured"
+
+            # tinyALSA DMIC recording (uses DMIC3, not DMIC2 like ALSA path)
+            # Per User Guide page 66: tinyALSA DMIC requires 4 mixer controls
+            # NOTE: Vision Mezzanine DIP2 Pin 2 must be ON for DMIC
+            info "Configuring tinyALSA DMIC recording..."
+            {
+                tinymix set 'TX DMIC MUX2' 'DMIC3'
+                tinymix set 'TX_CDC_DMA_TX_3 Channels' 'One'
+                tinymix set 'TX_AIF1_CAP Mixer DEC2' 1
+                tinymix set 'MultiMedia1 Mixer TX_CDC_DMA_TX_3' 1
+            } 2>/dev/null || true
+            log "tinyALSA DMIC configured"
             ;;
         *)
             warn "No audio system found. TTS will be silently disabled."
             ;;
     esac
 
-    # ---- Microphone configuration ----
+    # ---- Microphone configuration (ALSA / PulseAudio path) ----
     info "Configuring onboard digital microphone..."
     if [ "$AUDIO_SYSTEM" = "alsa" ] || [ "$AUDIO_SYSTEM" = "pulseaudio" ]; then
         {
@@ -431,8 +447,8 @@ setup_accelerators() {
     info "QRB5165 SoC capabilities:"
     info "  CPU: Kryo 585 (1x Cortex-A77 @ 2.84GHz + 3x A77 @ 2.42GHz + 4x A55 @ 1.80GHz)"
     info "  GPU: Adreno 650"
-    info "  DSP: Hexagon 698"
-    info "  NPU: Qualcomm AI Engine (via QNN SDK)"
+    info "  DSP: Hexagon DSP"
+    info "  NPU: NPU230 (via QNN SDK)"
 
     # Check Hexagon DSP
     if [ -e /dev/adsprpc-smd ] || [ -d /dsp ]; then

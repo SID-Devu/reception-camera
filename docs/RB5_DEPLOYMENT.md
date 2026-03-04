@@ -115,11 +115,13 @@ Located at **DIP_SW_0** on the board:
 | 1   | Onboard DMIC      | **ON**      | Enable digital microphone |
 | 2   | Debug UART        | ON          | For serial debugging |
 | 3   | Auto Power-Up     | **ON**      | Board boots on power connect |
-| 4   | HDMI              | **OFF**     | OFF = HDMI output enabled |
-| 5   | IMU Sensor        | ON          | Default |
+| 4   | DSI0 / HDMI       | **OFF**     | OFF = DSI0 routed to HDMI bridge (LT9611UCX); ON = DSI0 to HS1 connector |
+| 5   | SPI Select        | **OFF**     | OFF = SPI to onboard IMU; ON = SPI to LS3 connector |
 | 6   | IMU External Clk  | OFF         | Default |
 
 > **Important:** Pin 3 ON ensures the board auto-starts after power loss (essential for kiosk/reception deployment).
+>
+> **Vision Mezzanine DIP2:** If using DMIC audio recording with the Vision Mezzanine attached, set DIP2 Pin 2 to ON.
 
 ### Verify ADB Connection
 
@@ -214,15 +216,19 @@ v4l2-ctl --list-devices   # List with names
 
 3. **Test with GStreamer:**
 ```bash
+# Camera index mapping (Vision Mezzanine):
+#   camera=0 -> IMX577 (4K main camera, CAM2/CSI2 connector)
+#   camera=1 -> OV9282 (720p tracking camera, CAM1/CSI1 connector)
+
 # 720p preview to Wayland display:
 export XDG_RUNTIME_DIR=/run/user/root
 gst-launch-1.0 qtiqmmfsrc camera=0 ! \
-  video/x-raw,format=NV12,width=1280,height=720,framerate=30/1 ! \
+  'video/x-raw(memory:GBM),format=NV12,width=1280,height=720,framerate=30/1' ! \
   waylandsink
 
 # 4K capture to file:
 gst-launch-1.0 qtiqmmfsrc camera=0 ! \
-  video/x-raw,format=NV12,width=3840,height=2160,framerate=30/1 ! \
+  'video/x-raw(memory:GBM),format=NV12,width=3840,height=2160,framerate=30/1' ! \
   qtic2venc ! h264parse ! mp4mux ! filesink location=test_4k.mp4
 
 # Headless test (no display):
@@ -281,13 +287,21 @@ gst-launch-1.0 audiotestsrc wave=sine freq=440 ! alsasink
 Ensure DIP_SW_0 Pin 1 is **ON**, then:
 
 ```bash
-# DMIC Configuration:
+# DMIC Configuration (ALSA path - 8 commands per User Guide):
 amixer cset name='TX DEC2 MUX' 'MSM_DMIC'
 amixer cset name='TX DMIC MUX2' 'DMIC2'
 amixer cset name='TX_CDC_DMA_TX_3 Channels' 'One'
+amixer cset name='TX_CDC_DMA_TX_3 SampleRate' 'KHZ_48'
+amixer cset name='TX_CDC_DMA_TX_3 Format' 'S16_LE'
 amixer cset name='TX_AIF1_CAP Mixer DEC2' 1
 amixer cset name='TX_DEC2 Volume' 84
 amixer cset name='MultiMedia1 Mixer TX_CDC_DMA_TX_3' 1
+
+# tinyALSA DMIC alternative (4 commands, uses DMIC3 not DMIC2):
+# tinymix set 'TX DMIC MUX2' 'DMIC3'
+# tinymix set 'TX_CDC_DMA_TX_3 Channels' 'One'
+# tinymix set 'TX_AIF1_CAP Mixer DEC2' 1
+# tinymix set 'MultiMedia1 Mixer TX_CDC_DMA_TX_3' 1
 
 # Record test:
 tinycap /tmp/test.wav -D 0 -d 7 -r 48000 -b 16 -T 5
@@ -322,12 +336,12 @@ sudo ./setup.sh --wifi-ssid "OfficeWiFi" --wifi-psk "password123"
 **Method 2: Manual wpa_supplicant**
 ```bash
 cat > /data/misc/wifi/wpa_supplicant.conf << 'EOF'
-ctrl_interface=/var/run/wpa_supplicant
-update_config=1
 network={
     ssid="OfficeWiFi"
     key_mgmt=WPA-PSK
     psk="password123"
+    pairwise=TKIP CCMP
+    group=TKIP CCMP
 }
 EOF
 reboot
@@ -336,7 +350,6 @@ reboot
 **Method 3: Open network**
 ```bash
 cat > /data/misc/wifi/wpa_supplicant.conf << 'EOF'
-ctrl_interface=/var/run/wpa_supplicant
 network={
     ssid="GuestWiFi"
     key_mgmt=NONE
@@ -350,7 +363,7 @@ reboot
 ## QNN SDK / AI Acceleration
 
 The QRB5165 has powerful AI accelerators:
-- **Hexagon 698 DSP** — Best for fixed quantized models
+- **Hexagon DSP (NPU230)** — Best for fixed quantized models
 - **Adreno 650 GPU** — Good for FP16 inference
 - **Kryo 585 CPU** — Fallback, still decent (~15-25 FPS)
 
@@ -509,15 +522,15 @@ journalctl -u reception-greeter -n 50 --no-pager
 |-----------|---------------|
 | CPU | Kryo 585: 1x A77 @2.84GHz + 3x A77 @2.42GHz + 4x A55 @1.80GHz |
 | GPU | Adreno 650 |
-| DSP | Hexagon 698 |
-| NPU | Qualcomm AI Engine (via QNN SDK) |
+| DSP | Hexagon DSP |
+| NPU | NPU230 (via QNN SDK) |
 | RAM | 8 GB LPDDR5 |
 | Storage | 128 GB UFS |
 | Camera ISP | Spectra 480, up to 200 MP |
 | Video | 8K30 / 4K120 encode/decode (H.265) |
 | Connectivity | Wi-Fi 6, Bluetooth 5.2, Gigabit Ethernet |
 | USB | USB 3.1 + USB-C (debug) |
-| Display | HDMI 1.4, 4K30 |
+| Display | HDMI (LT9611UCX bridge), 4K at 60 Hz |
 
 ### Board Connectors
 
