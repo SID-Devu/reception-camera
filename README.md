@@ -52,18 +52,201 @@ python tools/download_models.py
 python app/main.py --config app/config.yaml
 ```
 
-### Edge Devices (Qualcomm RB5, Raspberry Pi, NVIDIA Jetson)
+### Edge Devices: Qualcomm RB5 Deployment (Step-by-Step)
+
+**For other edge devices (Raspberry Pi, NVIDIA Jetson):** Same as Linux setup above.
+
+**For Qualcomm RB5 Development Kit:** Follow this guide if you have the hardware connected via USB-C.
+
+#### Step 1: Install ADB (Android Debug Bridge)
+
+ADB allows you to communicate with the RB5 board from your development machine.
+
+**Windows:**
+```powershell
+# Download Android SDK Platform Tools
+Invoke-WebRequest -Uri "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -OutFile "$env:TEMP\platform-tools.zip"
+Expand-Archive -Path "$env:TEMP\platform-tools.zip" -DestinationPath "C:\Android" -Force
+
+# Add to PATH permanently
+$current = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($current -notlike "*Android*") {
+  [Environment]::SetEnvironmentVariable('Path', "$current;C:\Android\platform-tools", 'User')
+}
+
+# Add for current session
+$env:PATH += ";C:\Android\platform-tools"
+adb version  # Verify installation
+```
+
+**macOS:**
+```bash
+brew install android-platform-tools
+adb version  # Verify
+```
+
+**Linux:**
+```bash
+sudo apt-get install android-tools-adb
+adb version  # Verify
+```
+
+#### Step 2: Connect RB5 and Verify Connection
+
+1. **Power on the RB5 board**
+2. **Connect USB-C debug cable** from RB5 to your development machine
+3. **Check connection:**
+   ```bash
+   adb devices
+   # Should show: <serial>  device
+   ```
+
+#### Step 3: Clone Project on Your Development Machine
 
 ```bash
-# On the device:
-cd /opt
+cd /path/to/projects
 git clone https://github.com/SID-Devu/reception-camera.git
 cd reception-camera
-chmod +x setup.sh scripts/*.sh
+```
+
+#### Step 4: Deploy to RB5
+
+The deployment script handles file transfer and setup execution.
+
+**Option A: Full Deployment (Recommended)**
+```bash
+# Linux/macOS:
+bash ./scripts/deploy_rb5.sh
+
+# Windows (via Git Bash):
+"C:\Program Files\Git\bin\bash.exe" ./scripts/deploy_rb5.sh
+```
+
+This will:
+- Push all project files to `/opt/reception-camera` on the RB5
+- Run the full setup
+- Configure audio, camera, display
+- Download AI models (~350MB)
+- Create systemd service for auto-start
+
+**Option B: Push Files Only**
+```bash
+bash ./scripts/deploy_rb5.sh --push-only
+```
+
+Then manually run setup on the RB5:
+```bash
+adb shell
+cd /opt/reception-camera
 sudo ./setup.sh
 ```
 
-For RB5-specific board configuration, deployment from a host machine, and hardware reference, see [docs/RB5_DEPLOYMENT.md](docs/RB5_DEPLOYMENT.md).
+**Option C: SSH Deployment** (if RB5 has network access)
+```bash
+bash ./scripts/deploy_rb5.sh --ssh root@<RB5_IP_ADDRESS>
+```
+
+#### Step 5: Validate Setup
+
+Check that everything installed correctly:
+
+```bash
+adb shell "cd /opt/reception-camera && ./scripts/validate.sh"
+```
+
+Expected output: **20+ PASS checks**
+
+If you see failures:
+```bash
+adb shell "cd /opt/reception-camera && ./scripts/validate.sh --fix"
+```
+
+#### Step 6: Add Your First Person
+
+Enroll a test person (no display needed for headless mode):
+
+```bash
+adb shell "cd /opt/reception-camera && source .venv/bin/activate && python tools/enroll.py --no-display --name 'Alice'"
+```
+
+#### Step 7: Start the Service
+
+**Option A: As a system service** (auto-starts on boot)
+```bash
+adb shell systemctl start reception-greeter
+adb shell systemctl status reception-greeter  # Verify running
+```
+
+**Option B: Manual run** (for testing)
+```bash
+adb shell "cd /opt/reception-camera && source .venv/bin/activate && python app/main.py --no-display --config app/config_rb5.yaml"
+```
+
+#### Step 8: Monitor Logs
+
+Watch live logs to debug issues:
+
+```bash
+adb shell journalctl -u reception-greeter -f
+```
+
+### Useful RB5 Commands
+
+```bash
+# Check board info
+adb shell getprop ro.product.board          # Should be: qrb5165
+adb shell df -h                              # Disk space
+
+# Manage service
+adb shell systemctl start reception-greeter
+adb shell systemctl stop reception-greeter
+adb shell systemctl restart reception-greeter
+
+# View service logs
+adb shell journalctl -u reception-greeter -n 100
+
+# Run interactive shell
+adb shell
+
+# Transfer files
+adb push <local-file> /opt/reception-camera/
+adb pull /opt/reception-camera/<file> .
+```
+
+### Troubleshooting RB5
+
+**ADB connection issues:**
+```bash
+# Restart ADB server
+adb kill-server
+adb start-server
+adb devices  # Try again
+
+# Check USB cable is in DEBUG port (not charging)
+```
+
+**Setup failed:**
+```bash
+# Check logs
+adb shell journalctl -u reception-greeter -n 50
+
+# Re-run setup
+adb shell "cd /opt/reception-camera && sudo ./setup.sh"
+```
+
+**Service won't start:**
+```bash
+# Check disk space
+adb shell df -h  # Need >2GB free
+
+# Check Python works
+adb shell "cd /opt/reception-camera && source .venv/bin/activate && python --version"
+
+# Check imports
+adb shell "cd /opt/reception-camera && source .venv/bin/activate && python app/main.py --help"
+```
+
+For more details, see [docs/RB5_DEPLOYMENT.md](docs/RB5_DEPLOYMENT.md).
 
 ---
 
