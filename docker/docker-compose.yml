@@ -8,24 +8,36 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ../src:/app/src
-      - ../scripts:/app/scripts
-      - ../docker:/app/docker
+      - ../app:/opt/reception-camera/app
+      - ../data:/opt/reception-camera/data
+      - ../models:/opt/reception-camera/models
+    devices:
+      - /dev/video0:/dev/video0  # USB camera passthrough
     environment:
-      - DATABASE_URL=sqlite:///app/database.db
       - CAMERA_RESOLUTION=1280x720
       - RECOGNITION_THRESHOLD=0.6
     restart: unless-stopped
 
-  db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: reception_db
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+  reception-camera-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gpu
+    ports:
+      - "8001:8000"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - ../app:/opt/reception-camera/app
+      - ../data:/opt/reception-camera/data
+      - ../models:/opt/reception-camera/models
+    devices:
+      - /dev/video0:/dev/video0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - CAMERA_RESOLUTION=1280x720
+      - RECOGNITION_THRESHOLD=0.6
     restart: unless-stopped
-
-volumes:
-  db_data:
